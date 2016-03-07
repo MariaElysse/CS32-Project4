@@ -10,8 +10,7 @@ DiskMultiMap::DiskMultiMap() : m_superBlock(0) { }
 DiskMultiMap::Iterator::Iterator() {
     m_file = nullptr;
     m_next = NULLOFFSET;
-
-
+    //this is only used when I'm creating an invalid iterator. How do I say that an iterator is invalid?
 }
 
 DiskMultiMap::Iterator::Iterator(BinaryFile::Offset offset, BinaryFile *file) {
@@ -36,7 +35,7 @@ MultiMapTuple DiskMultiMap::Iterator::operator*() {
 
 bool DiskMultiMap::Iterator::isValid() const {
     return m_next != NULLOFFSET; //lel wat this is definitely wrong
-}
+} //probably have a static variable (hasSomethingBeenDeletedOrAdded) and return true in these cases
 
 bool DiskMultiMap::createNew(const std::string &filename, unsigned int numBuckets) {
     m_superBlock = SuperBlock(numBuckets);
@@ -57,7 +56,11 @@ bool DiskMultiMap::openExisting(const std::string &filename) {
     if (m_file.openExisting(filename)) {
         if (m_file.read(m_superBlock, 0)) {
             return true;
+        } else {
+            std::cout << "File has no superblock. This is not a DiskMultiMap file." << std::endl;
         }
+    } else {
+        std::cout << "No such file:" << filename << ". Exiting." << std::endl;
     }
     return false;
 }
@@ -67,7 +70,7 @@ void DiskMultiMap::close() {
 }
 
 bool DiskMultiMap::insert(const std::string &key, const std::string &value, const std::string &context) {
-    BinaryFile::Offset offset = hash(key); //superblock occurs at the start of the file.
+    BinaryFile::Offset offset = hash(key);
     MultiMapNode toBeInserted;
     strcpy(toBeInserted.m_key, key.c_str());
     strcpy(toBeInserted.m_value, value.c_str());
@@ -106,5 +109,23 @@ DiskMultiMap::Iterator DiskMultiMap::search(const std::string &key) {
 
 BinaryFile::Offset DiskMultiMap::hash(const std::string &key) {
     const std::hash<std::string> stdhash = std::hash<std::string>();
-    return stdhash(key) % m_superBlock.m_numBuckets + sizeof(m_superBlock);
+    return stdhash(key) % m_superBlock.m_numBuckets +
+           sizeof(m_superBlock); //superblock occurs at the start of the file.
+}
+
+int DiskMultiMap::erase(const std::string &key, const std::string &value, const std::string &context) {
+    BinaryFile::Offset toBeDeleted;
+    if (!m_file.read(toBeDeleted, hash(key)))
+        return 0;
+    BinaryFile::Offset next = toBeDeleted;
+    BinaryFile::Offset prev = toBeDeleted;
+
+    while (next != NULLOFFSET) {
+        //if (toBeDeleted.m_value == value && toBeDeleted.m_context == context){
+        //get prev, set prev's next to next
+        //get LastDeleted, set lt this's next to lastdeleted, set lastdeleted to this.
+        //if a thing gets deleted (i.e. if I modify the lastDeleted) increment a variable that holds numDeleted
+        //}
+    }
+    return 0; //return numDeleted
 }
