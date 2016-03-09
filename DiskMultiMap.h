@@ -16,6 +16,7 @@ public:
         char m_value[121];
         char m_context[121];
         BinaryFile::Offset m_next;
+        bool deleted;
     };
     class Iterator {
     public:
@@ -33,6 +34,7 @@ public:
         BinaryFile *m_file;
         MultiMapNode m_this;
         BinaryFile::Offset m_next;
+        char m_key[121];
 
         // Your private member declarations will go here
     };
@@ -58,12 +60,12 @@ private:
     BinaryFile m_file;
 
     struct SuperBlock {
-        SuperBlock(BinaryFile::Offset m_numBuckets);
+        SuperBlock(unsigned long int m_numBuckets);
 
-        BinaryFile::Offset m_numBuckets;
+        unsigned long int m_numBuckets;
         BinaryFile::Offset m_DataStart;
         BinaryFile::Offset m_firstDeleted;
-        BinaryFile::Offset m_lastNode;
+        BinaryFile::Offset m_lastNode; //todo: use the length of the file.
     };
 
     SuperBlock m_superBlock;

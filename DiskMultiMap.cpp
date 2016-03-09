@@ -15,12 +15,18 @@ DiskMultiMap::Iterator::Iterator() {
 
 DiskMultiMap::Iterator::Iterator(BinaryFile::Offset offset, BinaryFile *file) {
     m_file = file;
-    m_file->read(m_this, offset);
-    m_next = m_this.m_next;
+    do {
+        m_file->read(m_this, offset);
+        m_next = m_this.m_next;
+        strcpy(m_key, m_this.m_key);
+    } while (strcmp(m_key, m_this.m_key) != 0);
 }
 
 DiskMultiMap::Iterator &DiskMultiMap::Iterator::operator++() {
-    m_file->read(m_this, m_next);
+    do {
+        m_file->read(m_this, m_next);
+        m_next = m_this.m_next;
+    } while (strcmp(m_this.m_key, m_key) != 0);
     return *this;
 }
 
@@ -39,13 +45,26 @@ bool DiskMultiMap::Iterator::isValid() const {
 
 bool DiskMultiMap::createNew(const std::string &filename, unsigned int numBuckets) {
     m_superBlock = SuperBlock(numBuckets);
-    return m_file.createNew(filename);
+    BinaryFile::Offset hasharray[numBuckets];
+    if (!m_file.createNew(filename)) {
+        return false;
+    }
+    if (!m_file.write(m_superBlock, 0)) {
+        return false;
+    }
+    for (int i = 0; i < numBuckets; i++) {
+        BinaryFile::Offset emptyOffset = 0;
+        if (!m_file.write(emptyOffset, (BinaryFile::Offset) (i * sizeof(BinaryFile::Offset) + sizeof(SuperBlock)))) {
+            return false;
+        }
+    }
+    return true;
 }
 
-DiskMultiMap::SuperBlock::SuperBlock(BinaryFile::Offset numBuckets) {
+DiskMultiMap::SuperBlock::SuperBlock(unsigned long int numBuckets) {
     m_numBuckets = numBuckets;
-    m_DataStart = sizeof(*this) + sizeof(m_numBuckets) *
-                                  m_numBuckets; //size of this superblock, plus size of each bucket * length of hashmap.
+    m_DataStart = (BinaryFile::Offset) (sizeof(*this) + sizeof(BinaryFile::Offset) *
+                                                        m_numBuckets); //size of this superblock, plus size of each bucket * length of hasharray.
     m_firstDeleted = NULLOFFSET;
     m_lastNode = m_DataStart;
 }
@@ -70,11 +89,15 @@ void DiskMultiMap::close() {
 }
 
 bool DiskMultiMap::insert(const std::string &key, const std::string &value, const std::string &context) {
+    if (key.size() > 120 || value.size() > 120 || context.size() > 120) {
+        return false;
+    }
     BinaryFile::Offset offset = hash(key);
     MultiMapNode toBeInserted;
     strcpy(toBeInserted.m_key, key.c_str());
     strcpy(toBeInserted.m_value, value.c_str());
     strcpy(toBeInserted.m_context, context.c_str());
+    toBeInserted.deleted = false;
     toBeInserted.m_next = NULLOFFSET; //fill the node that is to be inserted
     MultiMapNode currentNode;
     m_file.read(currentNode, offset); //read the head of the hashtable linkedlist
@@ -104,13 +127,13 @@ DiskMultiMap::Iterator DiskMultiMap::search(const std::string &key) {
     if (m_file.read(node, hashNumber))
         return Iterator(hashNumber, &m_file);
     else
-        return Iterator();
+        return Iterator(); //isnotvalid????? default constructor should return an invalid iterator then?
 }
 
 BinaryFile::Offset DiskMultiMap::hash(const std::string &key) {
     const std::hash<std::string> stdhash = std::hash<std::string>();
-    return stdhash(key) % m_superBlock.m_numBuckets +
-           sizeof(m_superBlock); //superblock occurs at the start of the file.
+    return (BinaryFile::Offset) (stdhash(key) % m_superBlock.m_numBuckets +
+                                 sizeof(m_superBlock)); //superblock occurs at the start of the file.
 }
 
 int DiskMultiMap::erase(const std::string &key, const std::string &value, const std::string &context) {
@@ -118,14 +141,31 @@ int DiskMultiMap::erase(const std::string &key, const std::string &value, const 
     if (!m_file.read(toBeDeleted, hash(key)))
         return 0;
     BinaryFile::Offset next = toBeDeleted;
-    BinaryFile::Offset prev = toBeDeleted;
-
+    int numDeleted = 0;
     while (next != NULLOFFSET) {
+        MultiMapNode nodeToBeDeleted;
+        m_file.read(nodeToBeDeleted, toBeDeleted);
+        if (nodeToBeDeleted.m_key == key) {
+            m_superBlock.m_firstDeleted = toBeDeleted;
+            next = nodeToBeDeleted.m_next;
+            nodeToBeDeleted.deleted = true;
+            nodeToBeDeleted.m_next = m_superBlock.m_firstDeleted;
+            numDeleted++;
+        } else {
+            next = nodeToBeDeleted.m_next;
+        }
         //if (toBeDeleted.m_value == value && toBeDeleted.m_context == context){
+        //compare the keys, if they're equal
         //get prev, set prev's next to next
         //get LastDeleted, set lt this's next to lastdeleted, set lastdeleted to this.
         //if a thing gets deleted (i.e. if I modify the lastDeleted) increment a variable that holds numDeleted
         //}
     }
-    return 0; //return numDeleted
+    return numDeleted; //return numDeleted
+}
+
+DiskMultiMap::~DiskMultiMap() {
+    if (m_file.isOpen())
+        close();
+
 }
