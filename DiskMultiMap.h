@@ -22,7 +22,7 @@ public:
     public:
         Iterator();
 
-        Iterator(BinaryFile::Offset offset, BinaryFile *file);
+        Iterator(BinaryFile::Offset offset, const std::string &key, BinaryFile *file);
         // You may add additional constructors
         bool isValid() const; //wat
 
@@ -35,6 +35,7 @@ public:
         MultiMapNode m_this;
         BinaryFile::Offset m_next;
         char m_key[121];
+        bool m_valid;
 
         // Your private member declarations will go here
     };
@@ -61,11 +62,9 @@ private:
 
     struct SuperBlock {
         SuperBlock(unsigned long int m_numBuckets);
-
         unsigned long int m_numBuckets;
         BinaryFile::Offset m_DataStart;
         BinaryFile::Offset m_firstDeleted;
-        BinaryFile::Offset m_lastNode; //todo: use the length of the file.
     };
 
     SuperBlock m_superBlock;
