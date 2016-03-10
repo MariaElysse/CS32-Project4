@@ -140,7 +140,7 @@ DiskMultiMap::Iterator DiskMultiMap::search(const std::string &key) {
 }
 
 BinaryFile::Offset DiskMultiMap::hash(const std::string &key) {
-    const std::hash<std::string> stdhash = std::hash<std::string>();
+    const std::hash<std::string> stdhash = std::hash<std::string>(); //this may return a negative number? be aware
     return (BinaryFile::Offset) (stdhash(key) % (m_superBlock.m_numBuckets +
                                                  sizeof(m_superBlock))); //superblock occurs at the start of the file.
 }
