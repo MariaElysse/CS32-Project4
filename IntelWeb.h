@@ -6,6 +6,7 @@
 #define PROJECT4_INTELWEB_H
 
 #include "InteractionTuple.h"
+#include "DiskMultiMap.h"
 #include <string>
 #include <vector>
 
@@ -32,6 +33,23 @@ public:
     bool purge(const std::string &entity);
 
 private:
+    struct InteractionTupleLT{ //less object for ordering the set of bad interactions.
+        bool operator() (const InteractionTuple& lhs, const InteractionTuple& rhs) const{
+            if (lhs.context < rhs.context){ //if the machine is LT, the interactiontuple is LT
+                return true;
+            } else if (lhs.context == rhs.context) { //if the machine is EQ
+                if (lhs.from < rhs.from){ //and the from is LT
+                    return true; //the tuple is LT
+                } else if (lhs.from == rhs.from){ //if the machine and the from are EQ
+                    if (lhs.to < rhs.to){ //and the to is LT
+                        return true; //the tuple is LT
+                    }
+                }
+            }
+            return false; //else the tuple is GTEQ.
+        }
+    };
+    DiskMultiMap m_resultMap, m_actorMap;
     // Your private member declarations will go here
 };
 
