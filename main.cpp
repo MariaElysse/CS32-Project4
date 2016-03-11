@@ -287,7 +287,7 @@ using namespace std;
 int main()
 {
     DiskMultiMap dm;
-    assert (dm.createNew("poop", 100000));
+    assert (dm.createNew("poop", 10));
     assert (dm.insert("poopy", "250", "context"));
     assert (dm.insert("poopy", "250", "context"));
     assert (dm.insert("poopy", "250", "context"));

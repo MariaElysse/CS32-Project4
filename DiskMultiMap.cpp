@@ -119,7 +119,7 @@ bool DiskMultiMap::insert(const std::string &key, const std::string &value, cons
         pointWrittenTo = m_superBlock.m_firstDeleted;
         MultiMapNode n;
         m_file.read(n, m_superBlock.m_firstDeleted);
-        m_superBlock.m_firstDeleted = n.m_next; //TODO: ???this seems wrong
+        m_superBlock.m_firstDeleted = n.m_next; //TODO: ???this seems wrong?
     }
     if (valueInTable == NULLOFFSET) { //this can be simplified
         toBeInserted.m_next = NULLOFFSET;
@@ -135,7 +135,7 @@ DiskMultiMap::Iterator DiskMultiMap::search(const std::string &key) {
     BinaryFile::Offset node;
     BinaryFile::Offset hashNumber = hash(key);
 
-    if (m_file.read(node, hashNumber))
+    if (m_file.read(node, hashNumber) && node != NULLOFFSET)
         return Iterator(node, key, &m_file);
     else
         return Iterator(); //isnotvalid????? default constructor should return an invalid iterator then?
@@ -176,17 +176,17 @@ int DiskMultiMap::erase(const std::string &key, const std::string &value, const 
 
 
 
-        //m_file.read(nodeToBeDeleted, nodeToBeDeleted.m_next);
-        //toBeDeleted = nodeToBeDeleted.m_next;
-        //next = nodeToBeDeleted.m_next;
+    //m_file.read(nodeToBeDeleted, nodeToBeDeleted.m_next);
+    //toBeDeleted = nodeToBeDeleted.m_next;
+    //next = nodeToBeDeleted.m_next;
 
 
-        //if (toBeDeleted.m_value == value && toBeDeleted.m_context == context){
-        //compare the keys, if they're equal
-        //get prev, set prev's next to next
-        //get LastDeleted, set lt this's next to lastdeleted, set lastdeleted to this.
-        //if a thing gets deleted (i.e. if I modify the lastDeleted) increment a variable that holds numDeleted
-        //}
+    //if (toBeDeleted.m_value == value && toBeDeleted.m_context == context){
+    //compare the keys, if they're equal
+    //get prev, set prev's next to next
+    //get LastDeleted, set lt this's next to lastdeleted, set lastdeleted to this.
+    //if a thing gets deleted (i.e. if I modify the lastDeleted) increment a variable that holds numDeleted
+    //}
     //}
     return numDeleted; //return numDeleted
 }
