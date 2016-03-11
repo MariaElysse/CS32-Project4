@@ -26,7 +26,8 @@ bool IntelWeb::ingest(const std::string &telemetryFile) {
 }
 
 IntelWeb::IntelWeb() {
-
+    m_actorMap.close();
+    m_resultMap.close();
 }
 
 IntelWeb::~IntelWeb() {
